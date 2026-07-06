@@ -199,7 +199,8 @@ function montar(art, img, tema, noticias) {
   const art = await gerar(tema, noticias);
   if (!art) { console.error("❌ Geração de IA falhou após retries."); process.exit(1); }
   const seed = Math.floor((Date.now() % 999999));
-  const img = "https://image.pollinations.ai/prompt/" + encodeURIComponent((IMG_Q[catKey] || "finance money") + " premium professional photography") + "?width=1200&height=630&seed=" + seed + "&nologo=true";
+  const slug = slugify(art.titulo) || "financas";
+  const img = "https://img.dinheironodiaadia.com/" + slug + ".webp?q=" + encodeURIComponent(IMG_Q[catKey] || "finance money brazil") + "&s=" + seed;
   const html = montar(art, img, tema, noticias);
   const label = CAT_LABEL[catKey] || "Finanças";
 
