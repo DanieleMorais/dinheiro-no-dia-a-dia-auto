@@ -104,6 +104,26 @@ async function getToken() {
   return j.access_token;
 }
 
+// Indexação instantânea no Google (Indexing API) — avisa o Google na hora que sai post novo.
+const crypto = require("crypto");
+function b64url(x) { return Buffer.from(x).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_"); }
+async function notifyGoogle(postUrl) {
+  const raw = process.env.GOOGLE_SA_JSON;
+  if (!raw || !postUrl) return;
+  try {
+    const sa = JSON.parse(raw);
+    const now = Math.floor(Date.now() / 1000);
+    const header = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+    const claim = b64url(JSON.stringify({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/indexing", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }));
+    const sig = b64url(crypto.sign("RSA-SHA256", Buffer.from(header + "." + claim), sa.private_key));
+    const tr = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: header + "." + claim + "." + sig }) });
+    const tk = (await tr.json()).access_token;
+    if (!tk) { console.log("Indexing API: sem token"); return; }
+    const r = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", { method: "POST", headers: { Authorization: "Bearer " + tk, "Content-Type": "application/json" }, body: JSON.stringify({ url: postUrl, type: "URL_UPDATED" }) });
+    console.log("Indexing API:", r.status === 200 ? "✅ Google avisado (" + postUrl + ")" : "status " + r.status);
+  } catch (e) { console.log("Indexing API erro:", e.message); }
+}
+
 async function titulosExistentes() {
   try {
     const r = await fetch(`https://www.blogger.com/feeds/${BLOG_ID}/posts/default?alt=json&max-results=500`, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -207,6 +227,6 @@ function montar(art, img, tema, noticias) {
   const token = await getToken();
   const pr = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${BLOG_ID}/posts/?isDraft=false`, { method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: JSON.stringify({ kind: "blogger#post", title: art.titulo, content: html, labels: [label] }) });
   const pd = await pr.json();
-  if (pd.url) { console.log("✅ PUBLICADO:", art.titulo, "→", pd.url); }
+  if (pd.url) { console.log("✅ PUBLICADO:", art.titulo, "→", pd.url); await notifyGoogle(pd.url); }
   else { console.error("❌ FALHA ao publicar:", JSON.stringify(pd.error?.message || pd).slice(0, 200)); process.exit(1); }
 })().catch(e => { console.error("FALHA GERAL:", e.message); process.exit(1); });
