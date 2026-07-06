@@ -174,9 +174,12 @@ async function gerar(tema, noticias) {
   return corpo.length >= 500 ? { titulo, resumo, corpo } : null;
 }
 
+function slugify(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70);
+}
 function montar(art, img, tema, noticias) {
-  const alt = (tema || "finanças").replace(/"/g, "");
-  const fig = `<figure style="margin:0 0 24px"><img src="${img}" alt="${alt}" style="width:100%;height:auto;border-radius:14px" /></figure>`;
+  const alt = (art.titulo || tema || "finanças").replace(/"/g, "");
+  const fig = `<figure style="margin:0 0 24px"><img src="${img}" alt="${alt}" title="${alt}" style="width:100%;height:auto;border-radius:14px" /></figure>`;
   const tl = art.resumo ? `<div style="background:linear-gradient(135deg,#f0f7ff,#eef4ff);border-left:5px solid #1a73e8;padding:18px 22px;border-radius:12px;margin:0 0 26px;font-size:1.05em"><strong style="color:#1a4fa0">📌 Resumo rápido:</strong> ${art.resumo}</div>` : "";
   const fontes = noticias.length ? `\n<div style="background:#fafafa;border:1px solid #eee;border-radius:12px;padding:14px 18px;margin:26px 0;font-size:.9em;color:#555"><strong>Contexto e atualidade:</strong> considera o noticiário econômico brasileiro recente${noticias[0]?.fonte ? " (como " + noticias[0].fonte + ")" : ""}.</div>` : "";
   const aviso = `\n<p style="font-size:.88em;color:#777;border-top:1px solid #eee;padding-top:14px;margin-top:28px"><em>Este conteúdo é informativo e não constitui recomendação financeira individual. Compare condições e, se possível, consulte um profissional.</em></p>`;
