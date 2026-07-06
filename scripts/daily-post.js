@@ -126,25 +126,52 @@ async function buscarNoticias(catKey) {
   } catch { return []; }
 }
 
-async function gerar(tema, noticias) {
-  const ctx = noticias.length ? `\n\nNOTÍCIAS RECENTES DO BRASIL (use 1-2 como gancho na abertura, cite a fonte; NÃO invente números):\n${noticias.map(n => "- " + n.titulo + " (" + n.fonte + ")").join("\n")}` : "";
-  const prompt = `Você é editor(a)-chefe de um portal premium de finanças pessoais no Brasil. Escreva um artigo EXTREMAMENTE PREMIUM, aprofundado e original em português sobre: "${tema}".${ctx}\n\nEXIGÊNCIAS: 1000-1500 palavras, denso e específico (passos, exemplos, faixas de valores). Abertura ancorada na atualidade. 5-7 <h2> com <h3>, <ul><li> e onde couber UMA <table>. Tom de autoridade, use você. Seção <h2>Perguntas frequentes</h2> com 4 <h3>. NÃO cite marcas específicas nem invente taxas exatas. NÃO se identifique como IA. NÃO escreva html/head/body/h1 nem markdown.\n\nFORMATO (exato):\nLinha 1: TITULO: <título até 65 caracteres>\nLinha 2: RESUMO: <1-2 frases valiosas>\nDepois: corpo em HTML puro (começando com <p>).`;
-  for (let t = 0; t < 6; t++) {
+// Chama a IA com cadeia de reforço: OpenRouter (gpt-4o-mini -> modelo grátis) -> Pollinations
+async function callAI(prompt) {
+  const OR = process.env.OPENROUTER_API_KEY;
+  if (OR) {
+    const models = ["openai/gpt-4o-mini", "meta-llama/llama-3.3-70b-instruct:free"];
+    for (const model of models) {
+      for (let t = 0; t < 3; t++) {
+        try {
+          const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + OR, "Content-Type": "application/json", "HTTP-Referer": "https://dinheironodiaadia2026.blogspot.com", "X-Title": "Dinheiro no Dia a Dia" },
+            body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], temperature: 0.8, max_tokens: 3500 }),
+            signal: AbortSignal.timeout(90000),
+          });
+          if (r.status === 429 || r.status >= 500) { await sleep(12000); continue; }
+          if (!r.ok) break; // 401/402/404 -> próximo modelo
+          const c = (await r.json()).choices?.[0]?.message?.content?.trim();
+          if (c && c.length > 400) { console.log("IA: OpenRouter/" + model); return c; }
+        } catch { await sleep(5000); }
+      }
+    }
+  }
+  // fallback: Pollinations (grátis, sem chave)
+  for (let t = 0; t < 4; t++) {
     try {
       const r = await fetch("https://text.pollinations.ai/openai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: "openai-fast", messages: [{ role: "user", content: prompt }], temperature: 0.78 }), signal: AbortSignal.timeout(90000) });
-      if (r.status === 429) { await sleep(22000); continue; }
+      if (r.status === 429) { await sleep(20000); continue; }
       if (!r.ok) { await sleep(8000); continue; }
       const c = (await r.json()).choices?.[0]?.message?.content?.trim();
-      if (!c) { await sleep(8000); continue; }
-      const titulo = (c.match(/TITULO:\s*(.+)/i)?.[1] || tema).trim().replace(/^["#*\s]+|["*\s]+$/g, "").slice(0, 70);
-      const resumo = (c.match(/RESUMO:\s*(.+)/i)?.[1] || "").trim();
-      let corpo = /RESUMO:/i.test(c) ? c.replace(/^[\s\S]*?RESUMO:.*(?:\r?\n)+/i, "").trim() : c.replace(/^[\s\S]*?TITULO:.*(?:\r?\n)+/i, "").trim();
-      corpo = corpo.replace(/^```(?:html)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
-      if (corpo.length >= 550) return { titulo, resumo, corpo };
-      await sleep(5000);
+      if (c && c.length > 400) { console.log("IA: Pollinations"); return c; }
+      await sleep(6000);
     } catch { await sleep(6000); }
   }
   return null;
+}
+
+async function gerar(tema, noticias) {
+  const ctx = noticias.length ? `\n\nNOTÍCIAS RECENTES DO BRASIL (use 1-2 como gancho na abertura, cite a fonte; NÃO invente números):\n${noticias.map(n => "- " + n.titulo + " (" + n.fonte + ")").join("\n")}` : "";
+  const prompt = `Você é editor(a)-chefe de um portal premium de finanças pessoais no Brasil. Escreva um artigo EXTREMAMENTE PREMIUM, aprofundado e original em português sobre: "${tema}".${ctx}\n\nEXIGÊNCIAS: 1000-1500 palavras, denso e específico (passos, exemplos, faixas de valores). Abertura ancorada na atualidade. 5-7 <h2> com <h3>, <ul><li> e onde couber UMA <table>. Tom de autoridade, use você. Seção <h2>Perguntas frequentes</h2> com 4 <h3>. NÃO cite marcas específicas nem invente taxas exatas. NÃO se identifique como IA. NÃO escreva html/head/body/h1 nem markdown.\n\nFORMATO (exato):\nLinha 1: TITULO: <título até 65 caracteres>\nLinha 2: RESUMO: <1-2 frases valiosas>\nDepois: corpo em HTML puro (começando com <p>).`;
+  const c = await callAI(prompt);
+  if (!c) return null;
+  const titulo = (c.match(/TITULO:\s*(.+)/i)?.[1] || tema).trim().replace(/^["#*\s]+|["*\s]+$/g, "").slice(0, 70);
+  const resumo = (c.match(/RESUMO:\s*(.+)/i)?.[1] || "").trim();
+  let corpo = /RESUMO:/i.test(c) ? c.replace(/^[\s\S]*?RESUMO:.*(?:\r?\n)+/i, "").trim() : c.replace(/^[\s\S]*?TITULO:.*(?:\r?\n)+/i, "").trim();
+  corpo = corpo.replace(/^```(?:html)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+  return corpo.length >= 500 ? { titulo, resumo, corpo } : null;
 }
 
 function montar(art, img, tema, noticias) {
@@ -161,9 +188,8 @@ function montar(art, img, tema, noticias) {
   const jaTem = tema => { const w = norm(tema).split(" ").filter(x => x.length > 3); return existentes.some(t => w.filter(x => t.includes(x)).length >= Math.max(3, Math.ceil(w.length * 0.6))); };
   const candidatos = POOL.filter(([tema]) => !jaTem(tema));
   if (!candidatos.length) { console.log("Todos os temas do pool já foram publicados. Adicione novos temas ao POOL."); return; }
-  // escolhe um determinístico pelo dia (rotaciona) para não repetir
-  const idx = (new Date().getUTCFullYear() * 366 + Math.floor((Date.now() / 86400000))) % candidatos.length;
-  const [tema, catKey] = candidatos[idx];
+  // escolhe um tema aleatório entre os ainda NÃO publicados (garante variedade manhã/noite)
+  const [tema, catKey] = candidatos[Math.floor(Math.random() * candidatos.length)];
   console.log("Tema escolhido:", tema, "| categoria:", catKey, "| candidatos:", candidatos.length);
 
   const noticias = await buscarNoticias(catKey);

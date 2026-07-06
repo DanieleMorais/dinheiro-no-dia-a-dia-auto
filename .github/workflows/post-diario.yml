@@ -2,7 +2,8 @@ name: Post diário no blog
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # todo dia às 12:00 UTC (09:00 de Brasília)
+    - cron: "0 12 * * *"   # 12:00 UTC = 09:00 de Brasília (manhã)
+    - cron: "0 23 * * *"   # 23:00 UTC = 20:00 de Brasília (noite)
   workflow_dispatch:        # permite rodar manualmente pelo botão "Run workflow"
 
 jobs:
@@ -24,4 +25,5 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: node scripts/daily-post.js
