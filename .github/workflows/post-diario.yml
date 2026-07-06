@@ -1,0 +1,27 @@
+name: Post diário no blog
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # todo dia às 12:00 UTC (09:00 de Brasília)
+  workflow_dispatch:        # permite rodar manualmente pelo botão "Run workflow"
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Publicar 1 artigo
+        env:
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+        run: node scripts/daily-post.js

@@ -1,0 +1,10 @@
+{
+  "name": "dinheiro-no-dia-a-dia-auto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Robo diario que publica 1 artigo de financas no blog Dinheiro no Dia a Dia",
+  "type": "commonjs",
+  "scripts": {
+    "post": "node scripts/daily-post.js"
+  }
+}
