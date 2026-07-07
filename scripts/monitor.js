@@ -40,6 +40,14 @@ function dias(n) { const d = new Date(Date.now() - n * 86400000); return d.toISO
   const corpo = `Relatório dos blogs — ${hoje}\n\n${linhas.join("\n\n")}\n\n— Robô de monitoramento 💜`;
   console.log(corpo);
 
+  // Telegram (grupo Blogger)
+  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+    try {
+      const tr = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: "📊 " + corpo }) });
+      console.log("telegram:", (await tr.json()).ok ? "✅ enviado" : "falhou");
+    } catch (e) { console.log("telegram erro:", e.message); }
+  }
+
   if (RESEND) {
     const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: "Bearer " + RESEND, "Content-Type": "application/json" }, body: JSON.stringify({ from: "Robô Fada Madrinha <onboarding@resend.dev>", to: [EMAIL_TO], subject: `📊 Blogs Fada Madrinha — ${hoje}`, text: corpo }) });
     console.log("e-mail:", r.ok ? "✅ enviado" : "status " + r.status);
