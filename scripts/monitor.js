@@ -36,8 +36,19 @@ function dias(n) { const d = new Date(Date.now() - n * 86400000); return d.toISO
     } catch {}
     linhas.push(`📌 ${b.nome}\n   🔎 Google (28d): ${sc}\n   📊 Visitas: ${ga}`);
   }
+  // AdSense — ganhos do mês
+  let adLinha = "";
+  try {
+    const acc = await (await fetch("https://adsense.googleapis.com/v2/accounts", { headers: H })).json();
+    if (acc.accounts && acc.accounts[0]) {
+      const rep = await (await fetch(`https://adsense.googleapis.com/v2/${acc.accounts[0].name}/reports:generate?dateRange=MONTH_TO_DATE&metrics=ESTIMATED_EARNINGS&metrics=CLICKS`, { headers: H })).json();
+      const c = rep.totals && rep.totals.cells;
+      if (c) adLinha = `\n\n💰 AdSense (mês): ${c[0].value} | ${c[1].value} cliques`;
+    }
+  } catch {}
+
   const hoje = new Date().toISOString().slice(0, 10);
-  const corpo = `Relatório dos blogs — ${hoje}\n\n${linhas.join("\n\n")}\n\n— Robô de monitoramento 💜`;
+  const corpo = `Relatório dos blogs — ${hoje}\n\n${linhas.join("\n\n")}${adLinha}\n\n— Robô de monitoramento 💜`;
   console.log(corpo);
 
   // Telegram (grupo Blogger)
