@@ -16,6 +16,8 @@ jobs:
           node-version: "20"
       - name: Checar Search Console + GA4
         env:
+          GOOGLE_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_TO: fadamadrinhadm@gmail.com

@@ -1,11 +1,11 @@
 // Monitor diário: checa Search Console + GA4 dos 2 blogs e manda resumo (e-mail via Resend, se houver chave).
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "REMOVIDO";
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "REMOVIDO";
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const RT = process.env.GOOGLE_REFRESH_TOKEN;
 const RESEND = process.env.RESEND_API_KEY || "";
 const EMAIL_TO = process.env.EMAIL_TO || "fadamadrinhadm@gmail.com";
 
-if (!RT) { console.error("❌ Falta GOOGLE_REFRESH_TOKEN"); process.exit(1); }
+if (!RT || !CLIENT_ID || !CLIENT_SECRET) { console.error("❌ Faltam GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_REFRESH_TOKEN"); process.exit(1); }
 
 const BLOGS = [
   { nome: "Dinheiro no Dia a Dia", site: "https://www.dinheironodiaadia.com/", ga4: "544267278" },
