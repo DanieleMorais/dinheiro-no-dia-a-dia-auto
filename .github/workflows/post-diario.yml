@@ -6,6 +6,9 @@ on:
     - cron: "0 23 * * *"   # 23:00 UTC = 20:00 de Brasília (noite)
   workflow_dispatch:        # permite rodar manualmente pelo botão "Run workflow"
 
+permissions:
+  contents: write
+
 jobs:
   publicar:
     runs-on: ubuntu-latest
@@ -29,3 +32,16 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_SA_JSON: ${{ secrets.GOOGLE_SA_JSON }}
         run: node scripts/daily-post.js
+
+      - name: Registrar a execução (mantém o repositório ativo; sem commit por 60 dias o GitHub desliga o agendamento)
+        if: always()
+        run: |
+          mkdir -p estado
+          echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') ${{ job.status }}" > estado/ultima-execucao.txt
+          git config user.name "robo-blog"
+          git config user.email "robo-blog@users.noreply.github.com"
+          git add estado/ultima-execucao.txt
+          git diff --staged --quiet && exit 0
+          git commit -q -m "robô: execução $(date -u +'%d/%m %H:%M UTC') [skip ci]"
+          git pull -q --rebase --autostash origin main
+          git push -q
